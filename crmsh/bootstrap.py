@@ -1513,20 +1513,7 @@ def join_ssh(seed_host):
     configure_ssh_key(local_user)
     swap_public_ssh_key(local_user, remote_user, remote_user, seed_host, add=True)
     configure_ssh_key('hacluster')
-    # Make sure ~hacluster/.ssh exist remotely (idempotent)
-    continue_with_hacluster = True
-    try:
-        utils.get_stdout_or_raise_error(
-                '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
-                user=remote_user, remote=seed_host,
-            )
-    except ValueError as err:
-        continue_with_hacluster = False # at least we tried
-        logger.info("Failed to create ~hacluster/.ssh")
-
-    if continue_with_hacluster:
-        swap_public_ssh_key(local_user, remote_user, 'hacluster', seed_host)
-        swap_public_ssh_key('hacluster', remote_user, 'hacluster', seed_host)
+    swap_public_ssh_key('hacluster', remote_user, 'hacluster', seed_host, add=True)
 
     # This makes sure the seed host has its own SSH keys in its own
     # authorized_keys file (again, to help with the case where the
