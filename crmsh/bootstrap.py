@@ -1529,25 +1529,26 @@ def swap_public_ssh_key(local_user, remote_privileged_user, remote_user_to_swap,
     """
     Swap public ssh key between remote_node and local
     """
-    if local_user != "root" and not _context.with_other_user:
-        return
-
     # Detect whether need password to login to remote_node
     if utils.check_ssh_passwd_need(local_user, remote_user_to_swap, remote_node):
         # If no passwordless configured, paste /home/bob/.ssh/id_rsa.pub
         # to remote_node's /home/alice/.ssh/authorized_keys
         logger.info("Configuring SSH passwordless with {}@{}".format(remote_user_to_swap, remote_node))
         # After this, login to remote_node is passwordless
-        export_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remote_node)
+        try:
+            export_ssh_key(local_user, remote_privileged_user, remote_user_to_swap, remote_node)
+        except ValueError:
+            if local_user == 'hacluster' and remote_user_to_swap == 'hacluster':
+                utils.get_stdout_or_raise_error(
+                    '/usr/bin/env python3 -m crmsh.healthcheck fix-cluster PasswordlessHaclusterAuthenticationFeature',
+                    user=remote_privileged_user, remote=remote_node,
+                )
+                export_ssh_key('hacluster', remote_privileged_user, 'hacluster', remote_node)
 
     if add:
         configure_ssh_key(remote_user_to_swap, remote_node)
 
-    try:
-        import_ssh_key(local_user, remote_user_to_swap, remote_node)
-    except ValueError as err:
-        logger.warning(err)
-        return
+    import_ssh_key(local_user, remote_user_to_swap, remote_node)
 
 
 def remote_public_key_from(remote_user, remote_node):
