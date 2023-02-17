@@ -17,6 +17,7 @@ import subprocess
 import sys
 import random
 import re
+import tempfile
 import time
 import readline
 import shutil
@@ -2830,9 +2831,30 @@ def retrieve_all_config_files(cluster_node):
             rc, _, _ = utils.run_cmd_on_remote("test -f {}".format(f), cluster_node)
             if rc != 0:
                 continue
-            rc, _, err = utils.get_stdout_stderr("scp {} root@{}:{} {}".format(SSH_OPTION, cluster_node, f, os.path.dirname(f)))
-            if rc != 0:
-                utils.fatal("Can't retrieve {} from {}:{}".format(f, cluster_node, err))
+            try:
+                fd, path = tempfile.mkstemp(dir=os.path.dirname(f))
+                result = utils.subprocess_run_auto_ssh_no_input(
+                    'cat {}'.format(f),
+                    cluster_node,
+                    stdout=fd,
+                    stderr=subprocess.PIPE,
+                )
+                if result.returncode != 0:
+                    utils.fatal("Can't retrieve {} from {}:{}".format(f, cluster_node, result.stderr))
+                try:
+                    st = os.stat(f)
+                    os.chown(f, st.st_uid, st.st_gid)
+                    os.chmod(f, st.st_mode)
+                except FileNotFoundError:
+                    pass
+                os.rename(path, f)
+            except BaseException:
+                if path is not None:
+                    os.unlink(path)
+                raise
+            finally:
+                if fd is not None:
+                    os.close(fd)
             if f in [PCMK_REMOTE_AUTH]:
                 utils.chown(f, "hacluster", "haclient")
 
