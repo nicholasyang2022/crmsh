@@ -35,11 +35,17 @@ help_DATA	= doc/crm.8.adoc
 generated_docs	=
 generated_mans	=
 if BUILD_ASCIIDOC
-generated_docs	+= $(ascii:%.adoc=%.html) $(asciiman:%.adoc=%.html)
-generated_mans	+= $(asciiman:%.8.adoc=%.8)
-$(generated_mans): $(asciiman)
+generated_docs	+= doc/crmsh_crm_report.8.html doc/generated-sources/crm.8.html
+generated_mans	+= $(generated_docs:%.8.html=%.8)
+$(generated_docs): doc
+$(generated_mans): doc
 man8_MANS	= $(generated_mans)
 endif
+
+.PHONY: doc
+
+doc:
+	$(MAKE) -C doc man html
 
 %.html: %.adoc
 	$(ASCIIDOC) --unsafe --backend=xhtml11 $<

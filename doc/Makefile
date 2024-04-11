@@ -1,6 +1,6 @@
-.PHONY: all clean subdirs website website-clean
+.PHONY: all clean subdirs website website-clean man html
 
-all: crm.8.html generated-sources/crm.8.aio.adoc
+all: generated-sources/crm.8.aio.adoc
 
 generated-sources:
 	mkdir -p $@
@@ -20,8 +20,9 @@ generated-sources/crm.8.aio.adoc: generated-sources/crm.8.adoc generated-sources
 generated-sources/profiles.adoc: profiles.adoc generated-sources
 	cp $< $@
 
-crm.8.html: generated-sources/crm.8.aio.adoc
-	asciidoctor $<
+generated-sources/crm.8.html: generated-sources/crm.8.aio.adoc
+	asciidoc --unsafe --backend=xhtml11 $<
+	mv generated-sources/crm.8.aio.html generated-sources/crm.8.html
 
 website: generated-sources/crm.8.adoc
 	$(MAKE) -C website-v1 all
@@ -29,5 +30,18 @@ website: generated-sources/crm.8.adoc
 website-clean:
 	$(MAKE) -C website-v1 clean
 
+man: crmsh_crm_report.8 generated_sources/crm.8
+
+generated_sources/crm.8: generated-sources/crm.8.aio.adoc
+	a2x -f manpage $<
+
+crmsh_crm_report.8: crmsh_crm_report.8.adoc
+	a2x -f manpage $<
+
+html: generated-sources/crm.8.html crmsh_crm_report.8.html
+
+crmsh_crm_report.8.html: crmsh_crm_report.8.adoc
+	asciidoc --unsafe --backend=xhtml11 $<
+
 clean:	website-clean
-	$(RM) -r generated-sources crm.8.html
+	$(RM) -r generated-sources crmsh_crm_report.8 crmsh_crm_report.8.html
