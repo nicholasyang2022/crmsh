@@ -233,7 +233,7 @@ create_node() {
         info "Create ha specific container networks..."
 	for index in ${!HA_NETWORK_ARRAY[@]};do
 		network=${HA_NETWORK_ARRAY[$index]}
-		podman network create --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
+		podman network create --opt isolate=1 --ipv6 --subnet ${HA_NETWORK_V6_ARRAY[$index]} $network
 	done
 
 	for node in $*;do
