@@ -3,6 +3,7 @@ MAINTAINER Xin Liang <XLiang@suse.com>
 
 CMD ["/usr/lib/systemd/systemd", "--system"]
 
+RUN zypper ar -fG https://download.opensuse.org/repositories/home:/nicholasyang/openSUSE_Tumbleweed/home:nicholasyang.repo
 RUN zypper -n dup && zypper -n install systemd openssh \
         firewalld iptables iptables-backend-nft \
         make autoconf vim which libxslt-tools asciidoc mailx iproute2 iputils bzip2 tar file glibc-locale-base dos2unix cpio gawk sudo expect\
