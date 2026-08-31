@@ -2159,6 +2159,55 @@ class TestValidation(unittest.TestCase):
     @mock.patch('crmsh.bootstrap.get_cluster_node_ips')
     @mock.patch('crmsh.utils.get_nodeid_from_name')
     @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
+    def test_remove_node_from_cluster_removes_from_context_node_list(self, mock_crm_mon_parser, mock_get_nodeid, mock_get_ips, mock_stop, mock_status,
+            mock_invokerc, mock_error, mock_get_values, mock_del_by_name, mock_del_by_id, mock_csync2,
+            mock_adjust_priority, mock_configure_two_node, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config):
+        mock_crm_mon_parser_inst = mock.Mock()
+        mock_crm_mon_parser.return_value = mock_crm_mon_parser_inst
+        mock_crm_mon_parser_inst.is_node_remote.return_value = False
+        mock_get_nodeid.return_value = "1"
+        mock_get_ips.return_value = ["10.10.10.1"]
+        mock_cal_delnode.return_value = True
+        mock_invokerc.return_value = True
+        mock_get_values.return_value = ["10.10.10.1"]
+        mock_del_by_name.return_value = True
+        mock_del_by_id.return_value = True
+        mock_is_active.return_value = False
+        mock_firewall_inst = mock.Mock()
+        mock_firewall.return_value = mock_firewall_inst
+        mock_firewall_inst.remove_service = mock.Mock()
+        mock_cluster_shell_inst = mock.Mock()
+        mock_cluster_shell.return_value = mock_cluster_shell_inst
+
+        context = mock.Mock()
+        context.cluster_node = "node1"
+        context.rm_list = ["file1", "file2"]
+        context.node_list_in_cluster = ["node1", "node2"]
+        bootstrap._context = context
+
+        bootstrap.remove_node_from_cluster('node1')
+
+        self.assertEqual(context.node_list_in_cluster, ["node2"])
+
+    @mock.patch('crmsh.utils.HostUserConfig')
+    @mock.patch('crmsh.sh.cluster_shell')
+    @mock.patch('crmsh.bootstrap.FirewallManager')
+    @mock.patch.object(NodeMgmt, 'call_delnode')
+    @mock.patch('crmsh.service_manager.ServiceManager.service_is_active')
+    @mock.patch('crmsh.bootstrap.rm_configuration_files')
+    @mock.patch('crmsh.corosync.configure_two_node')
+    @mock.patch('crmsh.bootstrap.adjust_properties')
+    @mock.patch('crmsh.bootstrap.sync_file')
+    @mock.patch('crmsh.corosync.del_node_by_nodeid')
+    @mock.patch('crmsh.corosync.del_node_by_name')
+    @mock.patch('crmsh.corosync.get_values')
+    @mock.patch('crmsh.utils.fatal')
+    @mock.patch('crmsh.bootstrap.invokerc')
+    @mock.patch('logging.Logger.info')
+    @mock.patch('crmsh.bootstrap.stop_services')
+    @mock.patch('crmsh.bootstrap.get_cluster_node_ips')
+    @mock.patch('crmsh.utils.get_nodeid_from_name')
+    @mock.patch('crmsh.xmlutil.CrmMonXmlParser')
     def test_remove_node_from_cluster_by_nodeid(self, mock_crm_mon_parser, mock_get_nodeid, mock_get_ips, mock_stop, mock_status,
             mock_invokerc, mock_error, mock_get_values, mock_del_by_name, mock_del_by_id, mock_csync2,
             mock_adjust_priority, mock_configure_two_node, mock_rm_conf_files, mock_is_active, mock_cal_delnode, mock_firewall, mock_cluster_shell, mock_host_user_config):
