@@ -337,6 +337,7 @@ class Context(object):
             cluster_fs.ClusterFSManager.pre_verify(self)
         if not self.skip_csync2 and self.type == "init":
             self.skip_csync2 = utils.get_boolean(os.getenv("SKIP_CSYNC2_SYNC"))
+        logger.debug("skip_csync2 evaluated to %s in validate (command option or env SKIP_CSYNC2_SYNC)", self.skip_csync2)
         if self.skip_csync2 and self.stage:
             utils.fatal("-x option or SKIP_CSYNC2_SYNC can't be used with any stage")
         self._validate_stage()
@@ -2348,6 +2349,7 @@ def bootstrap_init(context):
     if stage and _context.cluster_is_running and \
             not ServiceManager(shell=sh.ClusterShellAdaptorForLocalShell(sh.LocalShell())).service_is_active(CSYNC2_SERVICE):
         _context.skip_csync2 = True
+        logger.debug("skip_csync2 evaluated to %s in bootstrap_init (because cluster is running, stage is specified, and csync2 service is inactive)", _context.skip_csync2)
         _context.node_list_in_cluster = utils.list_cluster_nodes()
     elif not _context.cluster_is_running:
         _context.node_list_in_cluster = [utils.this_node()]
@@ -2467,6 +2469,7 @@ def bootstrap_join(context):
                 _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(cluster_node)
                 setup_passwordless_with_other_nodes(cluster_node)
                 _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE, cluster_node)
+                logger.debug("skip_csync2 evaluated to %s in bootstrap_join (checked if csync2 service is active on cluster node %s)", _context.skip_csync2, cluster_node)
                 join_firewalld()
                 if _context.skip_csync2:
                     service_manager.stop_service(CSYNC2_SERVICE, disable=True)
@@ -2550,6 +2553,7 @@ def bootstrap_remove(context):
         utils.fatal("Cluster is not active - can't execute removing action")
 
     _context.skip_csync2 = not service_manager.service_is_active(CSYNC2_SERVICE)
+    logger.debug("skip_csync2 evaluated to %s in bootstrap_remove (checked if csync2 service is active on local node)", _context.skip_csync2)
     if _context.skip_csync2:
         _context.node_list_in_cluster = utils.fetch_cluster_node_list_from_node(utils.this_node())
 
