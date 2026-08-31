@@ -2256,6 +2256,12 @@ def remove_node_from_cluster(node, dead_node=False):
     corosync.configure_two_node(removing=True)
     adjust_properties()
 
+    try:
+        _context.node_list_in_cluster.remove(node)
+        logger.debug("Removed node %s from _context.node_list_in_cluster", node)
+    except ValueError:
+        pass
+
     logger.info("Propagating configuration changes across the remaining nodes")
     sync_file(CSYNC2_CFG)
     sync_file(corosync.conf())
