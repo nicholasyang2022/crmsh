@@ -398,7 +398,6 @@ Deleted 'p0' option: id=p0-meta_attributes-m0 name=m0
 
 .TRY resource trace p0 probe
 INFO: Trace for p0:monitor is written to /var/lib/heartbeat/trace_ra/Dummy
-INFO: Trace set, restart p0 to trace non-monitor operations
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -430,7 +429,6 @@ INFO: Trace set, restart p0 to trace non-monitor operations
 
 .TRY resource trace p0 start
 INFO: Trace for p0:start is written to /var/lib/heartbeat/trace_ra/Dummy
-INFO: Trace set, restart p0 to trace the start operation
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -467,7 +465,6 @@ INFO: Trace set, restart p0 to trace the start operation
 
 .TRY resource trace p0 stop
 INFO: Trace for p0:stop is written to /var/lib/heartbeat/trace_ra/Dummy
-INFO: Trace set, restart p0 to trace the stop operation
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -508,7 +505,7 @@ INFO: Trace set, restart p0 to trace the stop operation
 </cib>
 
 .TRY resource untrace p0 probe
-INFO: Stop tracing p0 for operation monitor
+INFO: Stop tracing p0:monitor
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -543,7 +540,7 @@ INFO: Stop tracing p0 for operation monitor
 </cib>
 
 .TRY resource untrace p0 start
-INFO: Stop tracing p0 for operation start
+INFO: Stop tracing p0:start
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
@@ -573,7 +570,7 @@ INFO: Stop tracing p0 for operation start
 </cib>
 
 .TRY resource untrace p0 stop
-INFO: Stop tracing p0 for operation stop
+INFO: Stop tracing p0:stop
 .INP: configure
 .INP: _regtest on
 .INP: show xml p0
