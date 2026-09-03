@@ -275,6 +275,7 @@ class QDevice(object):
         callback: QDeviceValidationCallback = QDeviceValidationCallback()
     ) -> bool:
         qnetd_nic = network_utils.InterfacesInfo().get_nic_by_subnet_of_addr(qnetd_addr)
+        logger.debug("qnetd_addr: %s, qnetd_nic: %s, corosync_nics: %s", qnetd_addr, qnetd_nic, corosync_nics)
         if qnetd_nic is not None and qnetd_nic in corosync_nics:
             callback.issue(
                 QDeviceValidationCallback.LEVEL_WARN,

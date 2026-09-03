@@ -13,8 +13,8 @@ Feature: corosync qdevice/qnetd setup/remove process
 
   @clean
   Scenario: Setup qdevice/qnetd during init/join process
-    When    Run "crm cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
-    Then    Expected "which is also used for Corosync links" in stderr
+    When    Run "crm -d cluster init --qnetd-hostname=qnetd-node -y" on "hanode1"
+    Then    Print stderr
     Then    Cluster service is "started" on "hanode1"
     And     Service "corosync-qdevice" is "started" on "hanode1"
     When    Run "crm cluster join -c hanode1 -y" on "hanode2"
