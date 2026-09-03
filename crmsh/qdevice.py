@@ -268,13 +268,32 @@ class QDevice(object):
             if not os.path.exists(cmd.split()[0]):
                 callback.issue(QDeviceValidationCallback.LEVEL_ERROR, "command {} not exist".format(cmd.split()[0]))
 
+    @staticmethod
+    def check_qnetd_corosync_interface(
+        qnetd_addr: str,
+        corosync_nics: typing.Sequence[str],
+        callback: QDeviceValidationCallback = QDeviceValidationCallback()
+    ) -> bool:
+        qnetd_nic = network_utils.InterfacesInfo().get_nic_by_subnet_of_addr(qnetd_addr)
+        if qnetd_nic is not None and qnetd_nic in corosync_nics:
+            callback.issue(
+                QDeviceValidationCallback.LEVEL_WARN,
+                f"QNetd server '{qnetd_addr}' is on network interface '{qnetd_nic}', which is also used for Corosync links"
+            )
+            return callback.ask_override("Do you want to continue using the same network interface for QNetd and Corosync?")
+        return True
+
     def check_corosync_qdevice_available(self, callback: QDeviceValidationCallback = QDeviceValidationCallback()):
         service_manager = ServiceManager()
         for node in get_node_list(self.is_stage):
             if not service_manager.service_is_available("corosync-qdevice.service", remote_addr=node):
                 callback.issue(QDeviceValidationCallback.LEVEL_ERROR, f"corosync-qdevice.service is not available on {node}")
 
-    def valid_qdevice_options(self, callback: typing.Optional[QDeviceValidationCallback] = None):
+    def valid_qdevice_options(
+        self,
+        callback: typing.Optional[QDeviceValidationCallback] = None,
+        corosync_nics: typing.Optional[typing.Sequence[str]] = None
+    ):
         """
         Validate qdevice related options
         """
@@ -283,6 +302,14 @@ class QDevice(object):
             utils.check_all_nodes_reachable("setup Qdevice")
         self.check_corosync_qdevice_available(cb)
         self.check_qnetd_addr(self.qnetd_addr, cb)
+
+        if corosync_nics is None and self.is_stage:
+            corosync_nics = corosync.get_corosync_interfaces()
+
+        if corosync_nics:
+            if not self.check_qnetd_corosync_interface(self.qnetd_addr, corosync_nics, callback=cb):
+                raise ValueError("Declined to use the same network interface for QNetd and Corosync")
+
         self.check_qnetd_port(self.port, cb)
         self.check_qdevice_algo(self.algo, cb)
         self.check_qdevice_tie_breaker(self.tie_breaker, cb)

@@ -844,3 +844,44 @@ Membership information
         self.assertEqual(len(cb.messages), 1)
         self.assertEqual(cb.messages[0][0], qdevice.QDeviceValidationCallback.LEVEL_ERROR)
         self.assertIn("invalid qnetd port range", cb.messages[0][1])
+
+
+@mock.patch("crmsh.network_utils.InterfacesInfo.get_nic_by_subnet_of_addr")
+def test_check_qnetd_corosync_interface_warn_and_override(mock_get_nic):
+    mock_get_nic.return_value = "eth0"
+    cb = mock.Mock()
+    cb.ask_override.return_value = True
+
+    res = qdevice.QDevice.check_qnetd_corosync_interface("192.168.1.50", ["eth0", "eth1"], callback=cb)
+
+    assert res is True
+    cb.issue.assert_called_once_with(
+        qdevice.QDeviceValidationCallback.LEVEL_WARN,
+        "QNetd server '192.168.1.50' is on network interface 'eth0', which is also used for Corosync links"
+    )
+    cb.ask_override.assert_called_once_with("Do you want to continue using the same network interface for QNetd and Corosync?")
+
+
+@mock.patch("crmsh.network_utils.InterfacesInfo.get_nic_by_subnet_of_addr")
+def test_check_qnetd_corosync_interface_decline(mock_get_nic):
+    mock_get_nic.return_value = "eth0"
+    cb = mock.Mock()
+    cb.ask_override.return_value = False
+
+    res = qdevice.QDevice.check_qnetd_corosync_interface("192.168.1.50", ["eth0"], callback=cb)
+
+    assert res is False
+    cb.issue.assert_called_once()
+    cb.ask_override.assert_called_once()
+
+
+@mock.patch("crmsh.network_utils.InterfacesInfo.get_nic_by_subnet_of_addr")
+def test_check_qnetd_corosync_interface_different_nic(mock_get_nic):
+    mock_get_nic.return_value = "eth2"
+    cb = mock.Mock()
+
+    res = qdevice.QDevice.check_qnetd_corosync_interface("192.168.1.50", ["eth0", "eth1"], callback=cb)
+
+    assert res is True
+    cb.issue.assert_not_called()
+    cb.ask_override.assert_not_called()

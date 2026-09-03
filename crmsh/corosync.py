@@ -246,6 +246,85 @@ def get_values(path):
     return ConfParser.get_values(path)
 
 
+def get_local_node_ring_addresses() -> list[str]:
+    """
+    Get configured ring[0-7]_addr entries for local node from corosync.conf.
+    Matches node by utils.this_node() or local IP in ring address.
+    """
+    try:
+        nodes = ConfParser.get_values("nodelist.node")
+    except Exception:
+        return []
+
+    if not nodes:
+        return []
+
+    this_node = utils.this_node()
+    target_node = None
+
+    # Try matching by node name
+    for node in nodes:
+        if isinstance(node, dict) and node.get("name") == this_node:
+            target_node = node
+            break
+
+    # Fallback: match by local IP in any ring[0-7]_addr
+    if not target_node:
+        for node in nodes:
+            if not isinstance(node, dict):
+                continue
+            for key, val in node.items():
+                if re.match(r'^ring[0-7]_addr$', key) and val:
+                    try:
+                        if network_utils.InterfacesInfo.ip_in_local(val):
+                            target_node = node
+                            break
+                    except Exception:
+                        pass
+            if target_node:
+                break
+
+    if not target_node or not isinstance(target_node, dict):
+        return []
+
+    ring_addrs = []
+    for i in range(8):
+        key = f"ring{i}_addr"
+        if key in target_node and target_node[key]:
+            ring_addrs.append(target_node[key])
+
+    return ring_addrs
+
+
+def get_corosync_interfaces(interfaces_inst: typing.Optional[network_utils.InterfacesInfo] = None) -> list[str]:
+    """
+    Get unique NIC names configured for Corosync on this node.
+    """
+    ring_addrs = get_local_node_ring_addresses()
+    if not ring_addrs:
+        return []
+
+    if interfaces_inst is None:
+        interfaces_inst = network_utils.InterfacesInfo()
+
+    corosync_nics = []
+    for addr in ring_addrs:
+        nic = None
+        try:
+            nic = interfaces_inst.get_nic_by_subnet_of_addr(addr)
+        except Exception:
+            pass
+        if not nic:
+            try:
+                nic = interfaces_inst.get_nic_name_by_addr(addr)
+            except Exception:
+                pass
+        if nic and nic not in corosync_nics:
+            corosync_nics.append(nic)
+
+    return corosync_nics
+
+
 def set_value(path, value, index: int = 0):
     ConfParser.set_value(path, value, index)
 

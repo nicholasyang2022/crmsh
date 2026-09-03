@@ -183,7 +183,7 @@ class GlobalVariables(object):
         Populate qdevice instance
         """
         if not self.args.qnetd_addr_input:
-            if self._any_qdevice_options_set() or self.args.stage == "qdevice":
+            if self._any_qdevice_options_set() or (self.args.stage == "qdevice" and self.args.yes_to_all):
                 utils.fatal("Option --qnetd-hostname is required if want to configure qdevice")
             return
 
@@ -367,7 +367,28 @@ class GlobalVariables(object):
                 utils.fatal(f"Package '{package}' is not installed")
         self._populate_qdevice()
         if self.qdevice_inst:
-            self.qdevice_inst.valid_qdevice_options(callback=BootstrapQDeviceValidationCallback())
+            if self.args.stage == "qdevice":
+                self.qdevice_inst.valid_qdevice_options(callback=BootstrapQDeviceValidationCallback())
+            else:
+                if self.interfaces_inst is None:
+                    self.interfaces_inst = network_utils.InterfacesInfo(self.ipv6, self.args.nic_addr_list)
+                    try:
+                        self.interfaces_inst.get_interfaces_info()
+                        self.interfaces_inst.flatten_custom_nic_addr_list()
+                    except ValueError:
+                        pass
+                corosync_nics = self.interfaces_inst.input_nic_list or []
+                if not corosync_nics:
+                    try:
+                        default_nic = self.default_nic or self.interfaces_inst.get_default_nic_from_route()
+                        if default_nic:
+                            corosync_nics = [default_nic]
+                    except Exception:
+                        pass
+                self.qdevice_inst.valid_qdevice_options(
+                    callback=BootstrapQDeviceValidationCallback(),
+                    corosync_nics=corosync_nics
+                )
         if self.args.ocfs2_devices or self.args.gfs2_devices or self.args.stage in ("ocfs2", "gfs2"):
             cluster_fs.ClusterFSManager.pre_verify(self)
         if self.args.skip_csync2:
@@ -1486,9 +1507,22 @@ def configure_qdevice_interactive():
             else:
                 return
 
-    qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
-    ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
-    qdevice.QDevice.check_qnetd_addr(qnetd_host)
+    while True:
+        try:
+            qnetd_addr_input = prompt_for_string("HOST or IP of the QNetd server to be used")
+            ssh_user, qnetd_host = utils.parse_user_at_host(qnetd_addr_input)
+            qdevice.QDevice.check_qnetd_addr(qnetd_host)
+            corosync_nics = corosync.get_corosync_interfaces() or [
+                nic for nic in [_global_variables.default_nic] if nic
+            ]
+            if not qdevice.QDevice.check_qnetd_corosync_interface(
+                qnetd_host, corosync_nics, callback=BootstrapQDeviceValidationCallback()
+            ):
+                continue
+            break
+        except ValueError as err:
+            logger.error("%s", err)
+
     _global_variables.args.qnetd_addr_input = qnetd_addr_input
     qnetd_port = prompt_for_string("TCP PORT of QNetd server",
             valid_func=qdevice.QDevice.check_qnetd_port)
