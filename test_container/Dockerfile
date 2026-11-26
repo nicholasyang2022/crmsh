@@ -9,6 +9,10 @@ RUN zypper -n dup && zypper -n install systemd openssh \
         python313 python313-pip python313-lxml python313-python-dateutil python313-build python313-PyYAML python313-curses python313-behave python313-coverage python313-packaging \
         csync2 corosync corosync-qdevice pacemaker pacemaker-remote booth corosync-qnetd
 
+RUN zypper -n addrepo https://download.opensuse.org/repositories/home:/nicholasyang/openSUSE_Tumbleweed/home:nicholasyang.repo && \
+    zypper -n --gpg-auto-import-keys refresh home_nicholasyang && \
+    zypper -n install --from home_nicholasyang --allow-vendor-change --oldpackage corosync corosync-libs
+
 RUN ssh-keygen -t rsa -f /root/.ssh/id_rsa -N '' && \
     cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys && \
     chmod 0600 /root/.ssh/authorized_keys
